@@ -555,19 +555,23 @@ function setMsg(id, text, type) {
 auth.onAuthStateChanged(async user => {
   if(!user) { showScreen('login'); return; }
   currentUser = user;
-  if(user.email === ADMIN_EMAIL) {
+  if(user.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
     currentUserData = { name: 'Administrator', approved: true, role: 'admin' };
     document.getElementById('topbar-user').textContent = 'Admin';
     document.getElementById('tab-admin-btn').classList.remove('hidden');
     showScreen('app'); showTab('tab-entry');
     return;
   }
-  const snap = await db.collection('users').doc(user.uid).get();
-  if(!snap.exists) { doLogout(); return; }
-  currentUserData = snap.data();
-  if(!currentUserData.approved) { showScreen('pending'); return; }
-  document.getElementById('topbar-user').textContent = currentUserData.name || user.email;
-  showScreen('app'); showTab('tab-entry');
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if(!snap.exists) {
+      showScreen('pending'); return;
+    }
+    currentUserData = snap.data();
+    if(!currentUserData.approved) { showScreen('pending'); return; }
+    document.getElementById('topbar-user').textContent = currentUserData.name || user.email;
+    showScreen('app'); showTab('tab-entry');
+  } catch(e) { showScreen('login'); }
 });
 
 async function doLogin() {
