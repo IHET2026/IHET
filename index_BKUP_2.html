@@ -301,10 +301,8 @@
     <div class="section-title">My Apartment</div>
     <div class="section-sub" id="my-apt-label">Year-by-year usage for your unit</div>
     <div class="metric-row" id="my-metrics"></div>
-
-    <!-- CHART 1: Year by year -->
     <div class="chart-card">
-      <h3>Year-by-year total</h3>
+      <h3>Annual consumption</h3>
       <div class="chart-toggle">
         <button class="chart-btn active" onclick="setMyMode('kwh',this)">kWh</button>
         <button class="chart-btn" onclick="setMyMode('cost',this)">Cost ($)</button>
@@ -312,36 +310,9 @@
       </div>
       <div class="chart-wrap"><canvas id="myChart"></canvas></div>
     </div>
-
-    <!-- CHART 2: Month by month for selected year -->
-    <div class="chart-card">
-      <h3>Month-by-month breakdown</h3>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-        <div class="chart-toggle" style="margin-bottom:0;">
-          <button class="chart-btn active" onclick="setMyMonthMode('kwh',this)">kWh</button>
-          <button class="chart-btn" onclick="setMyMonthMode('cost',this)">Cost ($)</button>
-        </div>
-        <select id="my-month-year" onchange="renderMyMonthChart()" style="padding:8px 14px;font-size:15px;border:2px solid #1a3a6b;border-radius:8px;background:#fff;color:#1a3a6b;font-weight:600;"></select>
-      </div>
-      <div class="chart-wrap"><canvas id="myMonthChart"></canvas></div>
-    </div>
-
-    <!-- CHART 3: Same month across years -->
-    <div class="chart-card">
-      <h3>Same month — year over year comparison</h3>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-        <div class="chart-toggle" style="margin-bottom:0;">
-          <button class="chart-btn active" onclick="setMyCrossMode('kwh',this)">kWh</button>
-          <button class="chart-btn" onclick="setMyCrossMode('cost',this)">Cost ($)</button>
-        </div>
-      </div>
-      <div class="chart-wrap" style="height:340px;"><canvas id="myCrossChart"></canvas></div>
-      <div style="font-size:13px;color:#888;margin-top:8px;">Each group = one month. Bars = different years. Highlights anomalies instantly.</div>
-    </div>
-
     <div class="entries-card">
       <h3>All my readings</h3>
-      <table><thead><tr><th>Period</th><th>kWh Used</th><th>Cost</th><th>Rate</th></tr></thead><tbody id="my-table"></tbody></table>
+      <table><thead><tr><th>Period</th><th>QL kWh</th><th>Unit kWh</th><th>Variance</th><th>Cost</th></tr></thead><tbody id="my-table"></tbody></table>
     </div>
   </div>
 
@@ -362,41 +333,13 @@
     <div class="section-title">All Buildings</div>
     <div class="section-sub">Combined view of buildings 551, 555, and 575</div>
     <div class="metric-row" id="all-metrics"></div>
-
-    <!-- CHART 1: Year by year -->
     <div class="chart-card">
-      <h3>Year-by-year total — all buildings</h3>
+      <h3>Building comparison — annual total</h3>
       <div class="chart-toggle">
         <button class="chart-btn active" onclick="setAllMode('kwh',this)">kWh</button>
         <button class="chart-btn" onclick="setAllMode('cost',this)">Cost ($)</button>
       </div>
       <div class="chart-wrap"><canvas id="allChart"></canvas></div>
-    </div>
-
-    <!-- CHART 2: Month by month for selected year -->
-    <div class="chart-card">
-      <h3>Month-by-month breakdown — all buildings</h3>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-        <div class="chart-toggle" style="margin-bottom:0;">
-          <button class="chart-btn active" onclick="setAllMonthMode('kwh',this)">kWh</button>
-          <button class="chart-btn" onclick="setAllMonthMode('cost',this)">Cost ($)</button>
-        </div>
-        <select id="all-month-year" onchange="renderAllMonthChart()" style="padding:8px 14px;font-size:15px;border:2px solid #1a3a6b;border-radius:8px;background:#fff;color:#1a3a6b;font-weight:600;"></select>
-      </div>
-      <div class="chart-wrap"><canvas id="allMonthChart"></canvas></div>
-    </div>
-
-    <!-- CHART 3: Same month across years -->
-    <div class="chart-card">
-      <h3>Same month — year over year comparison — all buildings</h3>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
-        <div class="chart-toggle" style="margin-bottom:0;">
-          <button class="chart-btn active" onclick="setAllCrossMode('kwh',this)">kWh</button>
-          <button class="chart-btn" onclick="setAllCrossMode('cost',this)">Cost ($)</button>
-        </div>
-      </div>
-      <div class="chart-wrap" style="height:340px;"><canvas id="allCrossChart"></canvas></div>
-      <div style="font-size:13px;color:#888;margin-top:8px;">Each group = one month. Bars = different years.</div>
     </div>
   </div>
 
@@ -430,10 +373,7 @@ const firebaseConfig={apiKey:"AIzaSyDsX-DusI6AoyRT5uNujiNNjjnZWuKHAVE",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(), db=firebase.firestore();
 let currentUser=null,currentUserData=null,myChartInst=null,lineChartInst=null,allChartInst=null,admChartInst=null;
-let myMonthChartInst=null,myCrossChartInst=null,allMonthChartInst=null,allCrossChartInst=null;
 let myMode='kwh',lineMode='kwh',allMode='kwh',importRows=[];
-let myMonthMode='kwh',myCrossMode='kwh',allMonthMode='kwh',allCrossMode='kwh';
-let myAllEntries=[];
 
 function populateFloorLine(f,l){f.innerHTML='<option value="">Select floor...</option>';l.innerHTML='<option value="">Select line...</option>';for(let i=1;i<=19;i++)f.innerHTML+=`<option>${i}</option>`;for(let i=1;i<=15;i++){const v=i<10?'0'+i:''+i;l.innerHTML+=`<option>${v}</option>`;}}
 function populateAdminDropdowns(){const af=document.getElementById('adm-floor'),al=document.getElementById('adm-line'),ay=document.getElementById('adm-year');af.innerHTML='<option value="">All floors</option>';al.innerHTML='<option value="">All lines</option>';ay.innerHTML='<option value="">All years</option>';for(let i=1;i<=19;i++)af.innerHTML+=`<option>${i}</option>`;for(let i=1;i<=15;i++){const v=i<10?'0'+i:''+i;al.innerHTML+=`<option>${v}</option>`;}const cur=new Date().getFullYear();for(let y=cur;y>=2015;y--)ay.innerHTML+=`<option>${y}</option>`;}
@@ -553,101 +493,20 @@ async function startImport(){
   document.getElementById('istep-3').className='import-step done';
 }
 
-async function loadMyData(){if(!currentUser)return;const isAdmin=currentUserData?.role==='admin';const building=isAdmin?'575':currentUserData?.building;const line=isAdmin?'02':currentUserData?.line;document.getElementById('my-apt-label').textContent=`Building ${building} · Line ${line} — year-by-year usage`;let q=db.collection('readings').where('userId','==',currentUser.uid);if(isAdmin)q=db.collection('readings').where('building','==','575').where('line','==','02');const snap=await q.get();const entries=snap.docs.map(d=>d.data());myAllEntries=entries;renderMyChart(entries);renderMyTable(entries);renderMyMetrics(entries);populateMyYearSelect(entries);renderMyMonthChart();renderMyCrossChart();}
-function renderMyMetrics(entries){if(!entries.length){document.getElementById('my-metrics').innerHTML='<div style="color:#888;">No readings yet.</div>';return;}const totalKwh=entries.reduce((s,e)=>s+e.qKwh,0),totalCost=entries.reduce((s,e)=>s+e.cost,0);const anomalies=entries.filter(e=>e.qKwh>700).length;const avgNormal=entries.filter(e=>e.qKwh<=700).reduce((s,e)=>s+e.cost,0)/Math.max(1,entries.filter(e=>e.qKwh<=700).length);const excessCost=entries.filter(e=>e.qKwh>700).reduce((s,e)=>s+e.cost,0)-(anomalies*avgNormal);document.getElementById('my-metrics').innerHTML=`<div class="metric"><div class="metric-label">Total readings</div><div class="metric-value">${entries.length}</div></div><div class="metric"><div class="metric-label">Total kWh (Quadlogic)</div><div class="metric-value blue">${Math.round(totalKwh).toLocaleString()}</div></div><div class="metric"><div class="metric-label">Total cost</div><div class="metric-value">$${totalCost.toFixed(2)}</div></div><div class="metric" style="background:#fff0f0;border-color:#ffcccc;"><div class="metric-label">Anomaly months</div><div class="metric-value" style="color:#c0392b;">${anomalies} ⚠️</div></div><div class="metric" style="background:#fff0f0;border-color:#ffcccc;"><div class="metric-label">Est. excess charges</div><div class="metric-value" style="color:#c0392b;">$${Math.round(excessCost).toLocaleString()}</div></div>`;}
+async function loadMyData(){if(!currentUser)return;const isAdmin=currentUserData?.role==='admin';const building=isAdmin?'575':currentUserData?.building;const line=isAdmin?'02':currentUserData?.line;document.getElementById('my-apt-label').textContent=`Building ${building} · Line ${line} — year-by-year usage`;let q=db.collection('readings').where('userId','==',currentUser.uid);if(isAdmin)q=db.collection('readings').where('building','==','575').where('line','==','02');const snap=await q.get();const entries=snap.docs.map(d=>d.data());renderMyChart(entries);renderMyTable(entries);renderMyMetrics(entries);}
+function renderMyMetrics(entries){if(!entries.length){document.getElementById('my-metrics').innerHTML='<div style="color:#888;">No readings yet.</div>';return;}const totalKwh=entries.reduce((s,e)=>s+e.qKwh,0),totalCost=entries.reduce((s,e)=>s+e.cost,0),avgVar=entries.reduce((s,e)=>s+Math.abs(e.varPct),0)/entries.length;document.getElementById('my-metrics').innerHTML=`<div class="metric"><div class="metric-label">Total readings</div><div class="metric-value">${entries.length}</div></div><div class="metric"><div class="metric-label">Total kWh (Quadlogic)</div><div class="metric-value blue">${Math.round(totalKwh).toLocaleString()}</div></div><div class="metric"><div class="metric-label">Total cost</div><div class="metric-value">$${totalCost.toFixed(2)}</div></div><div class="metric"><div class="metric-label">Avg meter variance</div><div class="metric-value ${avgVar<3?'green':'orange'}">${avgVar.toFixed(1)}%</div></div>`;}
 function renderMyChart(entries){const years=[...new Set(entries.map(e=>e.year))].sort();const data=years.map(y=>{const ye=entries.filter(e=>e.year===y);if(myMode==='kwh')return parseFloat(ye.reduce((s,e)=>s+e.qKwh,0).toFixed(1));if(myMode==='cost')return parseFloat(ye.reduce((s,e)=>s+e.cost,0).toFixed(2));return parseFloat((ye.reduce((s,e)=>s+Math.abs(e.varPct),0)/ye.length).toFixed(1));});if(myChartInst)myChartInst.destroy();myChartInst=new Chart(document.getElementById('myChart'),{type:'bar',data:{labels:years,datasets:[{label:myMode==='kwh'?'kWh':myMode==='cost'?'Cost ($)':'Variance %',data,backgroundColor:'#1a3a6b88',borderColor:'#1a3a6b',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}});}
-function renderMyTable(entries){const sorted=[...entries].sort((a,b)=>a.year-b.year||a.month-b.month);document.getElementById('my-table').innerHTML=sorted.map(e=>{const isAnomaly=e.qKwh>700;return`<tr style="${isAnomaly?'background:#fff0f0;font-weight:600;':''}""><td>${MONTHS[e.month-1]} ${e.year}</td><td>${Math.round(e.qKwh).toLocaleString()}${isAnomaly?' ⚠️':''}</td><td>$${e.cost.toFixed(2)}</td><td style="color:${e.rate>0.3?'#c0392b':e.rate>0.25?'#d35400':'#2e7d32'};font-weight:600;">$${e.rate.toFixed(4)}/kWh</td></tr>`;}).join('')||'<tr><td colspan="4" style="color:#888;text-align:center;">No readings yet.</td></tr>';}
+function renderMyTable(entries){const sorted=[...entries].sort((a,b)=>b.year-a.year||b.month-a.month);document.getElementById('my-table').innerHTML=sorted.map(e=>{const vc=Math.abs(e.varPct)<3?'variance-ok':Math.abs(e.varPct)<7?'variance-warn':'variance-bad';return`<tr><td>${MONTHS[e.month-1]} ${e.year}</td><td>${Math.round(e.qKwh).toLocaleString()}</td><td>${Math.round(e.uKwh).toLocaleString()}</td><td class="${vc}">${e.varPct.toFixed(1)}%</td><td>$${e.cost.toFixed(2)}</td></tr>`;}).join('')||'<tr><td colspan="5" style="color:#888;text-align:center;">No readings yet.</td></tr>';}
 function setMyMode(m,btn){myMode=m;document.querySelectorAll('#tab-my .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadMyData();}
-
-function populateMyYearSelect(entries){
-  const years=[...new Set(entries.map(e=>e.year))].sort((a,b)=>b-a);
-  const sel=document.getElementById('my-month-year');
-  sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
-}
-function setMyMonthMode(m,btn){myMonthMode=m;document.querySelectorAll('#tab-my .chart-card:nth-child(3) .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderMyMonthChart();}
-function setMyCrossMode(m,btn){myCrossMode=m;document.querySelectorAll('#tab-my .chart-card:nth-child(4) .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderMyCrossChart();}
-
-function renderMyMonthChart(){
-  const year=parseInt(document.getElementById('my-month-year')?.value||0);
-  if(!year||!myAllEntries.length)return;
-  const yearEntries=myAllEntries.filter(e=>e.year===year);
-  const data=MONTHS.map((_,i)=>{const me=yearEntries.filter(e=>e.month===i+1);if(!me.length)return null;return parseFloat((myMonthMode==='kwh'?me.reduce((s,e)=>s+e.qKwh,0):me.reduce((s,e)=>s+e.cost,0)).toFixed(2));});
-  const avgNormal=myAllEntries.filter(e=>e.qKwh<700).reduce((s,e)=>s+(myMonthMode==='kwh'?e.qKwh:e.cost),0)/Math.max(1,myAllEntries.filter(e=>e.qKwh<700).length);
-  const colors=data.map(v=>v===null?'#ccc':v>(avgNormal*2)?'#c0392b88':v>(avgNormal*1.3)?'#d3540088':'#1a3a6b88');
-  const borderColors=data.map(v=>v===null?'#ccc':v>(avgNormal*2)?'#c0392b':v>(avgNormal*1.3)?'#d35400':'#1a3a6b');
-  if(myMonthChartInst)myMonthChartInst.destroy();
-  myMonthChartInst=new Chart(document.getElementById('myMonthChart'),{
-    type:'bar',
-    data:{labels:MONTHS,datasets:[{label:myMonthMode==='kwh'?'kWh':'Cost ($)',data,backgroundColor:colors,borderColor:borderColors,borderWidth:2},{label:'Normal avg',data:Array(12).fill(parseFloat(avgNormal.toFixed(2))),type:'line',borderColor:'#2e7d32',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}
-  });
-}
-
-function renderMyCrossChart(){
-  if(!myAllEntries.length)return;
-  const years=[...new Set(myAllEntries.map(e=>e.year))].sort();
-  const datasets=years.map((y,i)=>({
-    label:String(y),
-    data:MONTHS.map((_,m)=>{const me=myAllEntries.filter(e=>e.year===y&&e.month===m+1);if(!me.length)return null;return parseFloat((myCrossMode==='kwh'?me.reduce((s,e)=>s+e.qKwh,0):me.reduce((s,e)=>s+e.cost,0)).toFixed(2));}),
-    backgroundColor:COLORS[i%COLORS.length]+'88',borderColor:COLORS[i%COLORS.length],borderWidth:2,
-  }));
-  if(myCrossChartInst)myCrossChartInst.destroy();
-  myCrossChartInst=new Chart(document.getElementById('myCrossChart'),{
-    type:'bar',
-    data:{labels:MONTHS,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555',callback:v=>myCrossMode==='kwh'?v+' kWh':'$'+v}}}}
-  });
-}
 
 async function loadLineData(){if(!currentUser)return;const line=currentUserData?.role==='admin'?'02':currentUserData?.line;const building=currentUserData?.role==='admin'?'575':currentUserData?.building;document.getElementById('line-label').textContent=`Line ${line} · Building ${building} — all floors`;const snap=await db.collection('readings').where('building','==',building).where('line','==',line).get();renderLineChart(snap.docs.map(d=>d.data()));}
 function renderLineChart(entries){const floors=[...new Set(entries.map(e=>e.floor))].sort((a,b)=>a-b);const data=floors.map(f=>{const fe=entries.filter(e=>e.floor===f);return parseFloat((lineMode==='kwh'?fe.reduce((s,e)=>s+e.qKwh,0):fe.reduce((s,e)=>s+e.cost,0)).toFixed(2));});if(lineChartInst)lineChartInst.destroy();lineChartInst=new Chart(document.getElementById('lineChart'),{type:'bar',data:{labels:floors.map(f=>'Floor '+f),datasets:[{label:lineMode==='kwh'?'Total kWh':'Total cost ($)',data,backgroundColor:'#2e7d3288',borderColor:'#2e7d32',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{color:'#555'}},y:{ticks:{color:'#555'}}}}});}
 function setLineMode(m,btn){lineMode=m;document.querySelectorAll('#tab-line .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadLineData();}
 
-let allEntriesCache=[];
-async function loadAllData(){const snap=await db.collection('readings').get();const entries=snap.docs.map(d=>d.data());allEntriesCache=entries;renderAllMetrics(entries);renderAllChart(entries);populateAllYearSelect(entries);renderAllMonthChart();renderAllCrossChart();}
+async function loadAllData(){const snap=await db.collection('readings').get();const entries=snap.docs.map(d=>d.data());renderAllMetrics(entries);renderAllChart(entries);}
 function renderAllMetrics(entries){const total=entries.reduce((s,e)=>s+e.qKwh,0),cost=entries.reduce((s,e)=>s+e.cost,0),avgVar=entries.length?entries.reduce((s,e)=>s+Math.abs(e.varPct),0)/entries.length:0;document.getElementById('all-metrics').innerHTML=`<div class="metric"><div class="metric-label">Total entries</div><div class="metric-value">${entries.length}</div></div><div class="metric"><div class="metric-label">Total kWh all buildings</div><div class="metric-value blue">${Math.round(total).toLocaleString()}</div></div><div class="metric"><div class="metric-label">Total cost</div><div class="metric-value">$${cost.toFixed(2)}</div></div><div class="metric"><div class="metric-label">Avg variance</div><div class="metric-value ${avgVar<3?'green':'orange'}">${avgVar.toFixed(1)}%</div></div>`;}
 function renderAllChart(entries){const years=[...new Set(entries.map(e=>e.year))].sort();const datasets=['551','555','575'].map((b,i)=>({label:'Bldg '+b,data:years.map(y=>{const ye=entries.filter(e=>e.building===b&&e.year===y);return parseFloat((allMode==='kwh'?ye.reduce((s,e)=>s+e.qKwh,0):ye.reduce((s,e)=>s+e.cost,0)).toFixed(2));}),backgroundColor:COLORS[i]+'88',borderColor:COLORS[i],borderWidth:2}));if(allChartInst)allChartInst.destroy();allChartInst=new Chart(document.getElementById('allChart'),{type:'bar',data:{labels:years,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}});}
-function setAllMode(m,btn){allMode=m;document.querySelectorAll('#tab-buildings .chart-card:nth-child(2) .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAllChart(allEntriesCache);}
-
-function populateAllYearSelect(entries){
-  const years=[...new Set(entries.map(e=>e.year))].sort((a,b)=>b-a);
-  const sel=document.getElementById('all-month-year');
-  if(sel)sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
-}
-function setAllMonthMode(m,btn){allMonthMode=m;document.querySelectorAll('#tab-buildings .chart-card:nth-child(3) .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAllMonthChart();}
-function setAllCrossMode(m,btn){allCrossMode=m;document.querySelectorAll('#tab-buildings .chart-card:nth-child(4) .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAllCrossChart();}
-
-function renderAllMonthChart(){
-  const year=parseInt(document.getElementById('all-month-year')?.value||0);
-  if(!year||!allEntriesCache.length)return;
-  const yearEntries=allEntriesCache.filter(e=>e.year===year);
-  const buildings=['551','555','575'];
-  const datasets=buildings.map((b,i)=>({
-    label:'Bldg '+b,
-    data:MONTHS.map((_,m)=>{const me=yearEntries.filter(e=>e.building===b&&e.month===m+1);if(!me.length)return null;return parseFloat((allMonthMode==='kwh'?me.reduce((s,e)=>s+e.qKwh,0):me.reduce((s,e)=>s+e.cost,0)).toFixed(2));}),
-    backgroundColor:COLORS[i]+'88',borderColor:COLORS[i],borderWidth:2
-  }));
-  if(allMonthChartInst)allMonthChartInst.destroy();
-  allMonthChartInst=new Chart(document.getElementById('allMonthChart'),{
-    type:'bar',data:{labels:MONTHS,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}
-  });
-}
-
-function renderAllCrossChart(){
-  if(!allEntriesCache.length)return;
-  const years=[...new Set(allEntriesCache.map(e=>e.year))].sort();
-  const datasets=years.map((y,i)=>({
-    label:String(y),
-    data:MONTHS.map((_,m)=>{const me=allEntriesCache.filter(e=>e.year===y&&e.month===m+1);if(!me.length)return null;return parseFloat((allCrossMode==='kwh'?me.reduce((s,e)=>s+e.qKwh,0):me.reduce((s,e)=>s+e.cost,0)).toFixed(2));}),
-    backgroundColor:COLORS[i%COLORS.length]+'88',borderColor:COLORS[i%COLORS.length],borderWidth:2,
-  }));
-  if(allCrossChartInst)allCrossChartInst.destroy();
-  allCrossChartInst=new Chart(document.getElementById('allCrossChart'),{
-    type:'bar',data:{labels:MONTHS,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}
-  });
-}
+function setAllMode(m,btn){allMode=m;document.querySelectorAll('#tab-buildings .chart-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');loadAllData();}
 
 async function loadPendingUsers(){const snap=await db.collection('users').where('approved','==',false).get();const el=document.getElementById('pending-users');if(snap.empty){el.innerHTML='<div style="color:#2e7d32;font-size:16px;">No pending approvals.</div>';return;}el.innerHTML=snap.docs.map(doc=>{const u=doc.data();return`<div class="user-row"><div class="user-info"><div class="user-email">${u.email}</div><div class="user-status">${u.name} · Bldg ${u.building} · Floor ${u.floor} · Line ${u.line}</div></div><div><button class="btn-sm btn-approve" onclick="approveUser('${doc.id}')">Approve</button><button class="btn-sm btn-reject" onclick="rejectUser('${doc.id}')">Reject</button></div></div>`;}).join('');}
 async function approveUser(uid){await db.collection('users').doc(uid).update({approved:true});loadPendingUsers();}
