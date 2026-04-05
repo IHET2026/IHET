@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -436,6 +435,8 @@
 const ADMIN_EMAIL='IHET2026@gmail.com';
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const COLORS=['#1a3a6b','#2e7d32','#d35400','#7b1fa2','#00838f','#c62828'];
+// NYC monthly average temperatures °F (historical averages)
+const NYC_TEMP_AVG=[34,37,45,55,65,74,79,78,71,60,49,38];
 const firebaseConfig={apiKey:"AIzaSyDsX-DusI6AoyRT5uNujiNNjjnZWuKHAVE",authDomain:"electricity-tracker-97e7a.firebaseapp.com",projectId:"electricity-tracker-97e7a",storageBucket:"electricity-tracker-97e7a.firebasestorage.app",messagingSenderId:"200803418270",appId:"1:200803418270:web:530097d1d08bbdaa5d7b8f"};
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(), db=firebase.firestore();
@@ -588,8 +589,19 @@ function renderMyMonthChart(){
   if(myMonthChartInst)myMonthChartInst.destroy();
   myMonthChartInst=new Chart(document.getElementById('myMonthChart'),{
     type:'bar',
-    data:{labels:MONTHS,datasets:[{label:myMonthMode==='kwh'?'kWh':'Cost ($)',data,backgroundColor:colors,borderColor:borderColors,borderWidth:2},{label:'Normal avg',data:Array(12).fill(parseFloat(avgNormal.toFixed(2))),type:'line',borderColor:'#2e7d32',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}
+    data:{labels:MONTHS,datasets:[
+      {label:myMonthMode==='kwh'?'kWh':'Cost ($)',data,backgroundColor:colors,borderColor:borderColors,borderWidth:2,yAxisID:'y'},
+      {label:'Normal avg',data:Array(12).fill(parseFloat(avgNormal.toFixed(2))),type:'line',borderColor:'#2e7d32',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,yAxisID:'y'},
+      {label:'Avg Temp (°F)',data:NYC_TEMP_AVG,type:'line',borderColor:'#e67e22',backgroundColor:'#e67e2222',borderWidth:2,pointRadius:4,pointBackgroundColor:'#e67e22',fill:false,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top'}},
+      scales:{
+        x:{ticks:{color:'#555'}},
+        y:{beginAtZero:true,ticks:{color:'#555'},title:{display:true,text:myMonthMode==='kwh'?'kWh':'Cost ($)',color:'#1a3a6b'}},
+        y2:{position:'right',min:0,max:100,ticks:{color:'#e67e22',callback:v=>v+'°F'},title:{display:true,text:'Temp (°F)',color:'#e67e22'},grid:{drawOnChartArea:false}}
+      }
+    }
   });
 }
 
@@ -599,13 +611,21 @@ function renderMyCrossChart(){
   const datasets=years.map((y,i)=>({
     label:String(y),
     data:MONTHS.map((_,m)=>{const me=myAllEntries.filter(e=>e.year===y&&e.month===m+1);if(!me.length)return null;return parseFloat((myCrossMode==='kwh'?me.reduce((s,e)=>s+e.qKwh,0):me.reduce((s,e)=>s+e.cost,0)).toFixed(2));}),
-    backgroundColor:COLORS[i%COLORS.length]+'88',borderColor:COLORS[i%COLORS.length],borderWidth:2,
+    backgroundColor:COLORS[i%COLORS.length]+'88',borderColor:COLORS[i%COLORS.length],borderWidth:2,yAxisID:'y'
   }));
+  datasets.push({label:'Avg Temp (°F)',data:NYC_TEMP_AVG,type:'line',borderColor:'#e67e22',borderWidth:2,pointRadius:4,pointBackgroundColor:'#e67e22',fill:false,yAxisID:'y2'});
   if(myCrossChartInst)myCrossChartInst.destroy();
   myCrossChartInst=new Chart(document.getElementById('myCrossChart'),{
     type:'bar',
     data:{labels:MONTHS,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555',callback:v=>myCrossMode==='kwh'?v+' kWh':'$'+v}}}}
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top'}},
+      scales:{
+        x:{ticks:{color:'#555'}},
+        y:{beginAtZero:true,ticks:{color:'#555',callback:v=>myCrossMode==='kwh'?v+' kWh':'$'+v}},
+        y2:{position:'right',min:0,max:100,ticks:{color:'#e67e22',callback:v=>v+'°F'},title:{display:true,text:'Temp (°F)',color:'#e67e22'},grid:{drawOnChartArea:false}}
+      }
+    }
   });
 }
 
@@ -644,16 +664,23 @@ function renderLineChart(entries){
   const avgNormal=entries.filter(e=>e.qKwh<=700).reduce((s,e)=>s+(lineMode==='kwh'?e.qKwh:e.cost),0)/Math.max(1,entries.filter(e=>e.qKwh<=700).length);
   const pointColors=values.map(v=>v>avgNormal*2?'#c0392b':'#1a3a6b');
   const pointSizes=values.map(v=>v>avgNormal*2?8:4);
+  const temps=entries.map(e=>NYC_TEMP_AVG[e.month-1]);
   if(lineChartInst)lineChartInst.destroy();
   lineChartInst=new Chart(document.getElementById('lineChart'),{
     type:'line',
     data:{labels,datasets:[
-      {label:lineMode==='kwh'?'kWh':'Cost ($)',data:values,borderColor:'#1a3a6b',backgroundColor:'#1a3a6b22',borderWidth:2,tension:0.3,fill:true,pointBackgroundColor:pointColors,pointRadius:pointSizes,pointBorderColor:pointColors},
-      {label:'Normal avg',data:Array(entries.length).fill(parseFloat(avgNormal.toFixed(2))),borderColor:'#2e7d32',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false}
+      {label:lineMode==='kwh'?'kWh':'Cost ($)',data:values,borderColor:'#1a3a6b',backgroundColor:'#1a3a6b22',borderWidth:2,tension:0.3,fill:true,pointBackgroundColor:pointColors,pointRadius:pointSizes,pointBorderColor:pointColors,yAxisID:'y'},
+      {label:'Normal avg',data:Array(entries.length).fill(parseFloat(avgNormal.toFixed(2))),borderColor:'#2e7d32',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,yAxisID:'y'},
+      {label:'Avg Temp (°F)',data:temps,borderColor:'#e67e22',borderWidth:2,pointRadius:3,pointBackgroundColor:'#e67e22',fill:false,tension:0.3,yAxisID:'y2'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,position:'top'}},
-      scales:{x:{ticks:{color:'#555',maxRotation:45,autoSkip:true,maxTicksLimit:12}},y:{beginAtZero:true,ticks:{color:'#555'}}}}
+      scales:{
+        x:{ticks:{color:'#555',maxRotation:45,autoSkip:true,maxTicksLimit:12}},
+        y:{beginAtZero:true,ticks:{color:'#555'}},
+        y2:{position:'right',min:0,max:100,ticks:{color:'#e67e22',callback:v=>v+'°F'},title:{display:true,text:'Temp (°F)',color:'#e67e22'},grid:{drawOnChartArea:false}}
+      }
+    }
   });
 }
 
@@ -712,12 +739,20 @@ function renderAllCrossChart(){
   const datasets=years.map((y,i)=>({
     label:String(y),
     data:MONTHS.map((_,m)=>{const me=allEntriesCache.filter(e=>e.year===y&&e.month===m+1);if(!me.length)return null;return parseFloat((allCrossMode==='kwh'?me.reduce((s,e)=>s+e.qKwh,0):me.reduce((s,e)=>s+e.cost,0)).toFixed(2));}),
-    backgroundColor:COLORS[i%COLORS.length]+'88',borderColor:COLORS[i%COLORS.length],borderWidth:2,
+    backgroundColor:COLORS[i%COLORS.length]+'88',borderColor:COLORS[i%COLORS.length],borderWidth:2,yAxisID:'y'
   }));
+  datasets.push({label:'Avg Temp (°F)',data:NYC_TEMP_AVG,type:'line',borderColor:'#e67e22',borderWidth:2,pointRadius:4,pointBackgroundColor:'#e67e22',fill:false,yAxisID:'y2'});
   if(allCrossChartInst)allCrossChartInst.destroy();
   allCrossChartInst=new Chart(document.getElementById('allCrossChart'),{
     type:'bar',data:{labels:MONTHS,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top'}},scales:{x:{ticks:{color:'#555'}},y:{beginAtZero:true,ticks:{color:'#555'}}}}
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top'}},
+      scales:{
+        x:{ticks:{color:'#555'}},
+        y:{beginAtZero:true,ticks:{color:'#555'}},
+        y2:{position:'right',min:0,max:100,ticks:{color:'#e67e22',callback:v=>v+'°F'},title:{display:true,text:'Temp (°F)',color:'#e67e22'},grid:{drawOnChartArea:false}}
+      }
+    }
   });
 }
 
